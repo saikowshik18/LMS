@@ -2,3 +2,4 @@ Django==4.2.24
 weasyprint==61.2
 pydyf==0.8.0
 Pillow==10.4.0
+gunicorn
