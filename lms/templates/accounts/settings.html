@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+
+{% block title %}Settings - Lemon Market Accounting{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h1 class="card-title">
+            <i class="fas fa-cog"></i>
+            Application Settings
+        </h1>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Gunny Bag Settings -->
+    <div class="card" style="background: var(--light-bg);">
+        <div class="card-header" style="background: white;">
+            <h2 class="card-title">
+                <i class="fas fa-shopping-bag"></i>
+                Gunny Bag Settings
+            </h2>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="update_settings">
+
+            <div class="form-group">
+                <label class="form-label" for="gunny_bag_cost">
+                    <i class="fas fa-rupee-sign"></i> Gunny Bag Cost (₹) *
+                </label>
+                <input type="number" id="gunny_bag_cost" name="gunny_bag_cost" class="form-control"
+                       step="0.01" min="0" value="{{ settings.gunny_bag_cost }}" required>
+                <small style="color: var(--light-text); margin-top: 0.5rem; display: block;">
+                    This cost will be automatically added to each bill item based on the number of bags.
+                </small>
+            </div>
+
+            <div style="background: white; padding: 1rem; border-radius: 5px; margin-bottom: 1.5rem;">
+                <p style="margin-bottom: 0.5rem;"><strong>Last Updated:</strong> {{ settings.updated_at|date:"d M, Y H:i" }}</p>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Update Settings
+            </button>
+        </form>
+    </div>
+
+    <!-- Shop Management -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-store"></i>
+                Shop Management
+            </h2>
+            <button type="button" class="btn btn-success" onclick="showCreateShopForm()">
+                <i class="fas fa-plus"></i> Add New Shop
+            </button>
+        </div>
+
+        <!-- Create Shop Form (Hidden by default) -->
+        <div id="createShopForm" style="display: none; background: var(--light-bg); padding: 1.5rem; border-radius: 5px; margin-bottom: 1.5rem;">
+            <h3 style="margin-bottom: 1rem; color: var(--primary-color);">Create New Shop</h3>
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="create_shop">
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">
+                            <i class="fas fa-store"></i> Shop Name *
+                        </label>
+                        <input type="text" name="shop_name" class="form-control" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">
+                            <i class="fas fa-map-marker-alt"></i> Address
+                        </label>
+                        <input type="text" name="shop_address" class="form-control">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">
+                            <i class="fas fa-phone"></i> Contact Number
+                        </label>
+                        <input type="text" name="shop_contact" class="form-control">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">
+                            <i class="fas fa-money-bill-wave"></i> Initial Deposit (₹) *
+                        </label>
+                        <input type="number" name="shop_deposit" class="form-control" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label class="form-label">
+                            <i class="fas fa-list-ol"></i> Bill Limit
+                        </label>
+                        <input type="number" name="shop_bill_limit" class="form-control" min="1" value="5">
+                        <small style="color: var(--light-text); margin-top: 0.25rem; display: block;">
+                            Maximum number of bills allowed for this shop.
+                        </small>
+                    </div>
+                </div>
+
+                <div style="margin-top: 1rem;">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Create Shop
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="hideCreateShopForm()">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Shops List -->
+        {% if shops %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Shop Name</th>
+                        <th>Contact</th>
+                        <th>Initial Deposit</th>
+                        <th>Current Balance</th>
+                        <th>Bill Limit</th>
+                        <th>Bills Created</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for shop in shops %}
+                    <tr>
+                        <td><strong>{{ shop.name }}</strong></td>
+                        <td>{{ shop.contact_number|default:"N/A" }}</td>
+                        <td>₹{{ shop.initial_deposit|floatformat:2 }}</td>
+                        <td>
+                            <strong style="color: {% if shop.current_balance >= 0 %}var(--success-color){% else %}var(--danger-color){% endif %}">
+                                ₹{{ shop.current_balance|floatformat:2 }}
+                            </strong>
+                        </td>
+                        <td>{{ shop.bill_limit }}</td>
+                        <td>
+                            {{ shop.bills.count }}
+                            {% if shop.bills.count >= shop.bill_limit %}
+                            <span class="badge badge-danger">Limit Reached</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if shop.is_active %}
+                            <span class="badge badge-success">Active</span>
+                            {% else %}
+                            <span class="badge badge-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <a href="{% url 'shop_detail' shop.id %}" class="btn btn-primary" style="padding: 0.5rem 1rem;">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'shop_edit' shop.id %}" class="btn btn-warning" style="padding: 0.5rem 1rem;">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if shop.can_create_bill %}
+                                <a href="{% url 'bill_create' shop.id %}" class="btn btn-success" style="padding: 0.5rem 1rem;">
+                                    <i class="fas fa-plus"></i> Bill
+                                </a>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center" style="padding: 3rem;">
+            <i class="fas fa-store-slash" style="font-size: 4rem; color: var(--light-text); margin-bottom: 1rem;"></i>
+            <h3 style="color: var(--light-text); margin-bottom: 1rem;">No Shops Created Yet</h3>
+            <p style="color: var(--light-text); margin-bottom: 2rem;">Start by creating your first shop!</p>
+            <button type="button" class="btn btn-primary" onclick="showCreateShopForm()">
+                <i class="fas fa-plus"></i> Create First Shop
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Today's Bills Section -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-calendar-day"></i>
+                Today's Bills - {{ today|date:"d M, Y" }}
+            </h2>
+            <a href="{% url 'todays_bills' %}" class="btn btn-primary">
+                <i class="fas fa-external-link-alt"></i> Open Today's Bills Page
+            </a>
+        </div>
+
+        <div style="padding: 1rem;">
+            <p style="color: var(--light-text); margin-bottom: 1rem;">
+                This page automatically refreshes for new days. Use it to quickly create and view today's bills for all shops.
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                <div style="background: var(--light-bg); padding: 1rem; border-radius: 5px; text-align: center;">
+                    <h3 style="color: var(--primary-color); margin-bottom: 0.5rem;">{{ todays_bills_count|default:0 }}</h3>
+                    <p style="color: var(--light-text); margin: 0;">Today's Bills</p>
+                </div>
+                <div style="background: var(--light-bg); padding: 1rem; border-radius: 5px; text-align: center;">
+                    <h3 style="color: var(--success-color); margin-bottom: 0.5rem;">₹{{ todays_total|default:"0.00" }}</h3>
+                    <p style="color: var(--light-text); margin: 0;">Today's Total</p>
+                </div>
+                <div style="background: var(--light-bg); padding: 1rem; border-radius: 5px; text-align: center;">
+                    <h3 style="color: var(--warning-color); margin-bottom: 0.5rem;">{{ active_shops_count|default:0 }}</h3>
+                    <p style="color: var(--light-text); margin: 0;">Active Shops</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Section -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <i class="fas fa-info-circle"></i>
+                About This Application
+            </h2>
+        </div>
+        <div style="line-height: 1.8;">
+            <p><strong>Lemon Market Accounting System</strong></p>
+            <p>A comprehensive billing and accounting solution for managing lemon market shop transactions, deposits, and generating detailed reports.</p>
+
+            <h3 style="margin-top: 1.5rem; margin-bottom: 1rem; color: var(--primary-color);">Key Features:</h3>
+            <ul style="list-style: none; padding-left: 0;">
+                <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success-color); margin-right: 0.5rem;"></i> Shop Management with Bill Limits</li>
+                <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success-color); margin-right: 0.5rem;"></i> Bill Creation with Multiple Items</li>
+                <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success-color); margin-right: 0.5rem;"></i> Automatic Gunny Bag Cost Calculation</li>
+                <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success-color); margin-right: 0.5rem;"></i> Deposit Tracking and Balance Management</li>
+                <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success-color); margin-right: 0.5rem;"></i> Day-wise Bill Tracking</li>
+                <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success-color); margin-right: 0.5rem;"></i> Statistics and Reports with Charts</li>
+                <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success-color); margin-right: 0.5rem;"></i> PDF Export Functionality</li>
+                <li style="margin-bottom: 0.5rem;"><i class="fas fa-check" style="color: var(--success-color); margin-right: 0.5rem;"></i> Auto-refresh for Today's Bills</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showCreateShopForm() {
+    document.getElementById('createShopForm').style.display = 'block';
+    document.getElementById('createShopForm').scrollIntoView({ behavior: 'smooth' });
+}
+
+function hideCreateShopForm() {
+    document.getElementById('createShopForm').style.display = 'none';
+}
+
+// Auto-refresh today's stats every 30 seconds
+setInterval(function() {
+    if (!document.hidden) {
+        // You could implement AJAX here to update stats without full page reload
+        console.log('Auto-refresh: Stats updated');
+    }
+}, 30000);
+</script>
+{% endblock %}
